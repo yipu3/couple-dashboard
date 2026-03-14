@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💑 关系健康 Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #0f0f1a; color: #e0e0e0; min-height: 100vh; }
+  
+  .header { text-align: center; padding: 32px 20px 16px; }
+  .header h1 { font-size: 36px; background: linear-gradient(135deg, #ff6b9d, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header .subtitle { color: #888; margin-top: 6px; font-size: 16px; }
+  
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 1100px; margin: 20px auto; padding: 0 20px; }
+  .stat-card { background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 16px; padding: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.06); }
+  .stat-card .number { font-size: 42px; font-weight: 700; }
+  .stat-card .label { font-size: 15px; color: #888; margin-top: 4px; }
+  .stat-card.pink .number { color: #ff6b9d; }
+  .stat-card.purple .number { color: #c084fc; }
+  .stat-card.blue .number { color: #60a5fa; }
+  .stat-card.green .number { color: #34d399; }
+  
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 1100px; margin: 20px auto; padding: 0 20px; }
+  .chart-card { background: #1a1a2e; border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.06); }
+  .chart-card h3 { font-size: 18px; color: #aaa; margin-bottom: 12px; }
+  .chart-container { width: 100%; height: 280px; }
+  .chart-note { text-align: center; color: #555; font-size: 12px; margin-top: 8px; font-style: italic; }
+  
+  .patterns-section { max-width: 1100px; margin: 20px auto; padding: 0 20px; }
+  .patterns-section h2 { font-size: 18px; color: #c084fc; margin-bottom: 12px; }
+  .pattern-card { background: #1a1a2e; border-radius: 12px; padding: 16px 20px; margin-bottom: 10px; border-left: 3px solid #ff6b9d; }
+  .pattern-card .name { font-weight: 600; color: #ff6b9d; font-size: 17px; }
+  .pattern-card .desc { color: #999; font-size: 15px; margin-top: 6px; line-height: 1.6; }
+  .pattern-card .freq { display: inline-block; margin-top: 6px; font-size: 12px; padding: 2px 10px; border-radius: 10px; }
+  .freq-high { background: rgba(239,68,68,0.15); color: #ef4444; }
+  .freq-mid { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  
+  .timeline-section { max-width: 1100px; margin: 20px auto 40px; padding: 0 20px; }
+  .timeline-section h2 { font-size: 18px; color: #60a5fa; margin-bottom: 16px; }
+  .case-card { background: #1a1a2e; border-radius: 12px; padding: 20px; margin-bottom: 14px; border: 1px solid rgba(255,255,255,0.06); position: relative; overflow: hidden; }
+  .case-card .date-badge { position: absolute; top: 16px; right: 16px; font-size: 12px; color: #666; }
+  .case-card .case-title { font-size: 20px; font-weight: 600; margin-bottom: 10px; padding-right: 80px; }
+  .case-card .case-trigger { font-size: 15px; color: #999; margin-bottom: 8px; }
+  .case-card .tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tag { font-size: 13px; padding: 4px 12px; border-radius: 10px; }
+  .tag.category { background: rgba(96,165,250,0.15); color: #60a5fa; }
+  .tag.intensity { border: 1px solid; }
+  .tag.consensus-yes { background: rgba(52,211,153,0.2); color: #34d399; }
+  .tag.consensus-no { background: rgba(239,68,68,0.15); color: #ef4444; }
+  .tag.recurring { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  .tag.source { background: rgba(192,132,252,0.15); color: #c084fc; }
+  
+  .intensity-bar { height: 4px; border-radius: 2px; background: #2a2a3e; }
+  .intensity-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+  
+  .case-detail { display: block; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .case-card.collapsed .case-detail { display: none; }
+  
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .detail-block { background: rgba(255,255,255,0.02); border-radius: 8px; padding: 12px; }
+  .detail-block .block-title { font-size: 13px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .detail-block .block-content { font-size: 15px; color: #bbb; line-height: 1.6; }
+  
+  .emotion-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .emotion-card { border-radius: 8px; padding: 12px; }
+  .emotion-card.partner-a { background: rgba(255,107,157,0.08); border: 1px solid rgba(255,107,157,0.15); }
+  .emotion-card.partner-b { background: rgba(96,165,250,0.08); border: 1px solid rgba(96,165,250,0.15); }
+  .emotion-card .partner-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .emotion-card.partner-a .partner-name { color: #ff6b9d; }
+  .emotion-card.partner-b .partner-name { color: #60a5fa; }
+  .emotion-card .partner-emotion { font-size: 15px; color: #aaa; }
+  
+  .need-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .need-card { background: rgba(255,255,255,0.02); border-radius: 8px; padding: 12px; }
+  .need-card .need-label { font-size: 13px; color: #666; margin-bottom: 4px; }
+  .need-card .need-text { font-size: 15px; color: #bbb; }
+  
+  .analysis-box { background: rgba(192,132,252,0.08); border-radius: 8px; padding: 12px; margin-top: 8px; }
+  .analysis-box .who { font-size: 14px; color: #c084fc; font-weight: 600; }
+  .analysis-box .text { font-size: 15px; color: #aaa; margin-top: 4px; line-height: 1.6; }
+  
+  .expand-hint { text-align: center; font-size: 11px; color: #444; margin-top: 8px; }
+  
+  @media (max-width: 700px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .charts-row { grid-template-columns: 1fr; }
+    .detail-grid, .emotion-row, .need-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>💑 关系健康 Dashboard</h1>
+  <div class="subtitle">玥老板 & 普老师 · AI夫妻调解员项目 · v2</div>
+</div>
+
+<div class="stats-row" id="statsRow"></div>
+
+<div class="charts-row">
+  <div class="chart-card">
+    <h3>🔥 触发原因统计（数量 + 占比）</h3>
+    <div class="chart-container" id="triggerChart"></div>
+    <div class="chart-note">哪类问题最常吵？一目了然</div>
+  </div>
+  <div class="chart-card">
+    <h3>📊 问题来源方分布</h3>
+    <div class="chart-container" id="sourceChart"></div>
+    <div class="chart-note">数据持续积累中，10+案例后趋势更清晰</div>
+  </div>
+</div>
+
+<div class="charts-row">
+  <div class="chart-card">
+    <h3>📈 情绪强度趋势</h3>
+    <div class="chart-container" id="intensityChart"></div>
+    <div class="chart-note">越低越好 · 下降 = 在改善</div>
+  </div>
+  <div class="chart-card">
+    <h3>🔄 解决方式分布</h3>
+    <div class="chart-container" id="resolutionChart"></div>
+  </div>
+</div>
+
+<div class="patterns-section">
+  <h2>⚡ 已识别的重复模式</h2>
+  <div id="patternsContainer"></div>
+</div>
+
+<div class="timeline-section">
+  <h2>📋 案例时间线 <span style="font-size:13px;color:#555;font-weight:normal">（点击展开详情）</span></h2>
+  <div id="timelineContainer"></div>
+</div>
+
+<script>
+const DATA = {
+  cases: [
+    { id:"CASE-001", date:"2026-03-14", title:"镜像反驳：早起难受没被接住",
+      trigger:{category:"沟通方式",description:"前晚吵架睡晚，早上起来难受，玥老板表达不舒服"},
+      narrative:"前一晚因为吵架导致两人都睡得很晚。第二天早上玥老板说「我很难受」，普老师没有先回应她的感受，而是说「我也是啊」——用自己的感受镜像反弹回去。玥老板觉得自己的情绪没被接住，进一步指出问题，普老师反过来觉得「跟你说话像被审判」。双方都想被理解，但谁也没先接住对方。",
+      pattern:{initiator:"玥老板（表达难受）",escalationPath:"表达感受 → 对方说'我也是' → 觉得没被接住 → 指出问题 → 对方觉得被审判",duration:"短",resolution:"冷处理",problemSource:"普老师（镜像反驳的沟通方式）"},
+      emotion:{surfaceNeed:"希望被关心、被接住",deepNeed:"长期不被看见的伤口",intensity:6,
+        pulaoshi:"委屈（觉得自己说话像被审判）",yuelaoban:"失望（又一次没被接住）"},
+      result:{consensus:false,recurring:true},
+      analysis:{doggo:"这是'镜像反驳'循环：你说感受→他防御→你更失望。解法：普老师先说「我知道你难受」再表达自己。",wangwang:"核心是两个人都需要被接住，但接不住对方"}
+    },
+    { id:"CASE-002", date:"2026-03-12", title:"宏观vs微观：社会话题讨论升级",
+      trigger:{category:"沟通方式",description:"讨论女性历史处境，观点分歧"},
+      narrative:"两人讨论女性在历史上的处境。玥老板从宏观结构性视角出发，谈整体趋势和系统性问题。普老师用个别反例来反驳，比如举特定女性成功案例说明情况没那么糟。一个在说'森林'，一个在揪'树'，越辩越激动。最终狗狗助理建议暂停讨论，避免进一步升级。",
+      pattern:{initiator:"双方（话题讨论）",escalationPath:"宏观观点 → 个例反驳 → 越辩越激动 → 狗狗建议暂停",duration:"中",resolution:"外部介入",problemSource:"普老师（用个例反驳整体论述）"},
+      emotion:{surfaceNeed:"想让对方理解自己的观点",deepNeed:"感觉对方不在同一个频道上沟通",intensity:7,
+        pulaoshi:"激动（觉得自己的论据被无视）",yuelaoban:"无奈（又在鸡同鸭讲）"},
+      result:{consensus:false,recurring:true},
+      analysis:{doggo:"用个例反驳不了结构性结论，就像说'今天冷所以没变暖'。解法：先复述对方的意思确认理解，再提出自己的观点。",wangwang:"给普老师的动作：先复述对方意思再回应，而不是直接反驳"}
+    },
+    { id:"CASE-003", date:"2026-02-24", title:"餐补错位：公婆提醒引发边界问题",
+      trigger:{category:"第三方因素（家人）",description:"普老师的爸爸提醒普老师要给玥老板妈餐补"},
+      narrative:"普老师的爸爸提醒他：要记得给玥老板的妈妈餐补。普老师把这个信息转达给了玥老板。玥老板立刻觉得不对——公婆凭什么来提醒/管她给自己妈钱的事？这是角色越界。她觉得这像宫斗剧里的权力关系，发了一篇相关文章表达不满，随后拉黑了普老师。核心问题不是餐补本身，而是「谁有资格提醒谁」的边界错位。",
+      pattern:{initiator:"普老师（转达公婆的提醒）",escalationPath:"公婆提醒 → 普老师转达 → 玥老板觉得边界错位 → 发宫斗剧文章 → 拉黑",duration:"短",resolution:"拉黑冷却",problemSource:"普老师（传话方式不当）+ 公婆（越界提醒）"},
+      emotion:{surfaceNeed:"不想公婆介入自己和妈妈的关系",deepNeed:"边界感被侵犯的愤怒",intensity:8,
+        pulaoshi:"委屈（好心传话却被怼）",yuelaoban:"愤怒（公婆凭什么管我给我妈钱的事）"},
+      result:{consensus:false,recurring:true},
+      analysis:{doggo:"普老师不该当传话筒。如果爸爸提醒了，自己消化掉就行，不需要转达给玥老板。传话=把边界问题升级。",wangwang:"核心是边界错位：公婆不该提醒儿子给儿媳妈餐补，这不是他们该管的事。普老师应该做防火墙而不是传声筒。"}
+    },
+    { id:"CASE-004", date:"2026-02-16", title:"碗筷分工调解",
+      trigger:{category:"家务分工",description:"饭后碗筷归谁洗产生分歧，双方都觉得自己做得多"},
+      narrative:"两人因为饭后碗筷该谁洗产生争执。双方都觉得自己承担了更多家务，但各说各的没有数据支撑。狗狗助理介入当裁判，让双方分别列出自己日常做的家务清单，用事实对比而不是靠感觉。最终达成共识：饭后碗筷按原来的分工不变，零散的杯子碗谁用谁自己洗。这是第一次AI调解成功，玥老板评价「狗狗协调还是不错的」。",
+      pattern:{initiator:"双方",escalationPath:"各说各理 → AI介入 → 列举对比 → 达成共识",duration:"短",resolution:"AI调解成功",problemSource:"双方（信息不对称）"},
+      emotion:{surfaceNeed:"家务量公平分配",deepNeed:"付出被看见和认可",intensity:5,
+        pulaoshi:"觉得自己做的没被看到",yuelaoban:"觉得自己做的没被看到"},
+      result:{consensus:true,recurring:false},
+      analysis:{doggo:"成功关键：用数据说话而不是感觉。AI的中立性让双方都愿意接受结果。规则清晰后问题不再复发。",wangwang:"有中立第三方+数据对比，比互相指责有效100倍"}
+    }
+  ],
+  patterns: [
+    {name:"镜像反驳",description:"对方表达感受时不先接住，而是说自己也有同样感受。建议：先说「我理解你难受」，再表达自己",frequency:"高"},
+    {name:"归纳vs演绎",description:"一方用宏观视角说整体趋势，另一方用个别反例反驳。建议：先复述对方意思再回应",frequency:"中"},
+    {name:"父母敏感区",description:"涉及两边父母的话题是高压线，边界感极强。建议：不代传话、不比较、各管各家",frequency:"高"}
+  ]
+};
+
+const cases = DATA.cases;
+const totalCases = cases.length;
+const avgIntensity = (cases.reduce((s,c)=>s+c.emotion.intensity,0)/totalCases).toFixed(1);
+const consensusRate = Math.round(cases.filter(c=>c.result.consensus).length/totalCases*100);
+const recurringRate = Math.round(cases.filter(c=>c.result.recurring).length/totalCases*100);
+
+document.getElementById('statsRow').innerHTML = `
+  <div class="stat-card pink"><div class="number">${totalCases}</div><div class="label">总案例数</div></div>
+  <div class="stat-card purple"><div class="number">${avgIntensity}</div><div class="label">平均情绪强度 /10</div></div>
+  <div class="stat-card green"><div class="number">${consensusRate}%</div><div class="label">达成共识率</div></div>
+  <div class="stat-card blue"><div class="number">${recurringRate}%</div><div class="label">重复问题占比</div></div>
+`;
+
+// Trigger category stats
+const triggerCounts={};
+cases.forEach(c=>{triggerCounts[c.trigger.category]=(triggerCounts[c.trigger.category]||0)+1;});
+const triggerEntries=Object.entries(triggerCounts).sort((a,b)=>b[1]-a[1]);
+const triggerColors=['#ff6b9d','#c084fc','#60a5fa','#34d399','#fbbf24','#f97316'];
+echarts.init(document.getElementById('triggerChart')).setOption({
+  tooltip:{trigger:'axis',formatter:p=>`${p[0].name}<br/>次数: <b>${p[0].value}</b>  占比: <b>${Math.round(p[0].value/totalCases*100)}%</b>`},
+  xAxis:{type:'category',data:triggerEntries.map(e=>e[0]),axisLabel:{color:'#aaa',fontSize:12,interval:0,rotate:triggerEntries.length>4?15:0},axisLine:{lineStyle:{color:'#333'}}},
+  yAxis:{type:'value',minInterval:1,axisLabel:{color:'#666'},splitLine:{lineStyle:{color:'#222'}}},
+  series:[{type:'bar',data:triggerEntries.map((e,i)=>({value:e[1],itemStyle:{color:triggerColors[i%triggerColors.length]}})),barWidth:40,itemStyle:{borderRadius:[6,6,0,0]},
+    label:{show:true,position:'top',color:'#aaa',fontSize:12,formatter:p=>`${p.value}次 (${Math.round(p.value/totalCases*100)}%)`}
+  }]
+});
+
+// Problem source
+const srcCounts = {普老师:0,玥老板:0,双方:0,第三方:0};
+cases.forEach(c=>{
+  const s = c.pattern.problemSource;
+  if(s.includes('双方')) srcCounts['双方']++;
+  else if(s.includes('公婆')||s.includes('第三方')) { srcCounts['普老师']++; srcCounts['第三方']++; }
+  else if(s.includes('普老师')) srcCounts['普老师']++;
+  else if(s.includes('玥老板')) srcCounts['玥老板']++;
+});
+const srcData = Object.entries(srcCounts).filter(e=>e[1]>0);
+echarts.init(document.getElementById('sourceChart')).setOption({
+  tooltip:{trigger:'axis'},
+  xAxis:{type:'category',data:srcData.map(e=>e[0]),axisLabel:{color:'#aaa'},axisLine:{lineStyle:{color:'#333'}}},
+  yAxis:{type:'value',minInterval:1,axisLabel:{color:'#666'},splitLine:{lineStyle:{color:'#222'}}},
+  series:[{type:'bar',data:srcData.map(e=>({value:e[1],itemStyle:{color:
+    e[0]==='普老师'?'#60a5fa':e[0]==='玥老板'?'#ff6b9d':e[0]==='双方'?'#c084fc':'#fbbf24'
+  }})),barWidth:36,itemStyle:{borderRadius:[6,6,0,0]}}]
+});
+
+// Intensity trend
+const sorted = [...cases].sort((a,b)=>a.date.localeCompare(b.date));
+echarts.init(document.getElementById('intensityChart')).setOption({
+  tooltip:{trigger:'axis',formatter:p=>`${p[0].name}<br/>情绪强度: <b>${p[0].value}/10</b>`},
+  xAxis:{type:'category',data:sorted.map(c=>c.date.slice(5)),axisLabel:{color:'#666'},axisLine:{lineStyle:{color:'#333'}}},
+  yAxis:{type:'value',min:0,max:10,axisLabel:{color:'#666'},splitLine:{lineStyle:{color:'#222'}}},
+  series:[{type:'line',data:sorted.map(c=>c.emotion.intensity),smooth:true,
+    lineStyle:{color:'#ff6b9d',width:3},
+    areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(255,107,157,0.3)'},{offset:1,color:'rgba(255,107,157,0)'}])},
+    itemStyle:{color:'#ff6b9d',borderWidth:2},symbol:'circle',symbolSize:10,
+    markLine:{data:[{type:'average',name:'平均',lineStyle:{color:'#c084fc',type:'dashed'},label:{color:'#c084fc',formatter:'平均 {c}'}}]}
+  }]
+});
+
+// Resolution
+const resCounts={};
+cases.forEach(c=>{resCounts[c.pattern.resolution]=(resCounts[c.pattern.resolution]||0)+1;});
+const resEntries=Object.entries(resCounts).sort((a,b)=>b[1]-a[1]);
+const resColors={'AI调解成功':'#34d399','外部介入':'#60a5fa','冷处理':'#fbbf24','拉黑冷却':'#ef4444'};
+echarts.init(document.getElementById('resolutionChart')).setOption({
+  tooltip:{trigger:'item',formatter:'{b}: {c}次'},
+  color:resEntries.map(e=>resColors[e[0]]||'#c084fc'),
+  series:[{type:'pie',radius:['40%','70%'],center:['50%','55%'],
+    label:{color:'#aaa',fontSize:12,formatter:'{b}\n{c}次'},
+    data:resEntries.map(e=>({name:e[0],value:e[1]})),
+    itemStyle:{borderRadius:6,borderColor:'#1a1a2e',borderWidth:3}
+  }]
+});
+
+// Patterns
+document.getElementById('patternsContainer').innerHTML = DATA.patterns.map(p=>`
+  <div class="pattern-card">
+    <div class="name">⚡ ${p.name}</div>
+    <div class="desc">${p.description}</div>
+    <span class="freq ${p.frequency==='高'?'freq-high':'freq-mid'}">频率：${p.frequency}</span>
+  </div>
+`).join('');
+
+// Timeline
+function ic(v){return v>=8?'#ef4444':v>=6?'#fbbf24':'#34d399';}
+document.getElementById('timelineContainer').innerHTML = [...cases].sort((a,b)=>b.date.localeCompare(a.date)).map(c=>`
+  <div class="case-card" onclick="this.classList.toggle('expanded')">
+    <div class="date-badge">${c.date}</div>
+    <div class="case-title">${c.title}</div>
+    <div class="case-trigger" style="margin-bottom:12px">${c.trigger.description}</div>
+    ${c.narrative?`<div style="font-size:16px;color:#ccc;line-height:1.8;margin-bottom:14px;padding:16px;background:rgba(255,255,255,0.03);border-radius:8px;border-left:3px solid #60a5fa">${c.narrative}</div>`:''}
+    <div class="tags">
+      <span class="tag category">${c.trigger.category}</span>
+      <span class="tag intensity" style="background:${ic(c.emotion.intensity)}22;color:${ic(c.emotion.intensity)};border-color:${ic(c.emotion.intensity)}44">强度 ${c.emotion.intensity}/10</span>
+      <span class="tag ${c.result.consensus?'consensus-yes':'consensus-no'}">${c.result.consensus?'✅ 达成共识':'❌ 未达共识'}</span>
+      ${c.result.recurring?'<span class="tag recurring">🔄 重复问题</span>':''}
+      <span class="tag source">📌 ${c.pattern.problemSource}</span>
+    </div>
+    <div class="intensity-bar"><div class="intensity-fill" style="width:${c.emotion.intensity*10}%;background:${ic(c.emotion.intensity)}"></div></div>
+
+    <div class="case-detail">
+      <div class="detail-grid">
+        <div class="detail-block"><div class="block-title">发起方</div><div class="block-content">${c.pattern.initiator}</div></div>
+        <div class="detail-block"><div class="block-title">解决方式</div><div class="block-content">${c.pattern.resolution}</div></div>
+      </div>
+      <div class="detail-block" style="margin-bottom:12px"><div class="block-title">升级路径</div><div class="block-content">${c.pattern.escalationPath}</div></div>
+      <div class="emotion-row">
+        <div class="emotion-card partner-a"><div class="partner-name">💗 玥老板的情绪</div><div class="partner-emotion">${c.emotion.yuelaoban}</div></div>
+        <div class="emotion-card partner-b"><div class="partner-name">💙 普老师的情绪</div><div class="partner-emotion">${c.emotion.pulaoshi}</div></div>
+      </div>
+      <div class="need-row">
+        <div class="need-card"><div class="need-label">表面诉求</div><div class="need-text">${c.emotion.surfaceNeed}</div></div>
+        <div class="need-card"><div class="need-label">深层需求</div><div class="need-text">${c.emotion.deepNeed}</div></div>
+      </div>
+      ${c.analysis.doggo?`<div class="analysis-box"><div class="who">🐕 狗狗分析</div><div class="text">${c.analysis.doggo}</div></div>`:''}
+      ${c.analysis.wangwang?`<div class="analysis-box" style="margin-top:6px"><div class="who">🐾 汪汪分析</div><div class="text">${c.analysis.wangwang}</div></div>`:''}
+    </div>
+  </div>
+`).join('');
+</script>
+</body>
+</html>
