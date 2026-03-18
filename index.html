@@ -164,6 +164,15 @@ const DATA = {
       result:{consensus:false,recurring:true},
       analysis:{doggo:"普老师不该当传话筒。如果爸爸提醒了，自己消化掉就行，不需要转达给玥老板。传话=把边界问题升级。",wangwang:"核心是边界错位：公婆不该提醒儿子给儿媳妈餐补，这不是他们该管的事。普老师应该做防火墙而不是传声筒。"}
     },
+    { id:"CASE-005", date:"2026-03-18", title:"银行卡沟通：信息精度不对等",
+      trigger:{category:"沟通方式",description:"在巴厘岛报瑜伽课需要Visa/MC支付，问普老师借卡时沟通不畅"},
+      narrative:"玥老板用自己的银联debit card支付瑜伽课失败，需要Visa或Mastercard。问普老师借卡，明确说了需要Visa或Mastercard。普老师只回答「我的就是银行卡」，没有回答关键信息（是不是Visa/MC）。玥老板反复追问，普老师反复只说「银行卡」。最后才说「跟你的卡一样」——还是模糊的，没直接说「我的也是银联，没有Visa功能」。一个简单的问题来回沟通多次才得到答案。",
+      pattern:{initiator:"玥老板（提出需求）",escalationPath:"明确提问 → 模糊回答 → 再次追问 → 还是模糊 → 反复多次 → 烦躁",duration:"短",resolution:"最终解决但过程低效",problemSource:"普老师（回答精度不够，没回应真正的问题）"},
+      emotion:{surfaceNeed:"高效得到一个简单问题的答案",deepNeed:"沟通时被认真对待、被好好回应",intensity:4,
+        pulaoshi:"觉得自己已经回答了（我说了是银行卡啊）",yuelaoban:"烦躁（简单问题反复沟通，效率极低）"},
+      result:{consensus:false,recurring:true},
+      analysis:{doggo:"和CASE-001、CASE-002同一类：信息颗粒度不在同一层。对方问Visa还是MC，回答「银行卡」等于没回答。解法：用对方问题的精度来回答——「我的也是银联，没有Visa」一句话解决。",wangwang:null}
+    },
     { id:"CASE-004", date:"2026-02-16", title:"碗筷分工调解",
       trigger:{category:"家务分工",description:"饭后碗筷归谁洗产生分歧，双方都觉得自己做得多"},
       narrative:"两人因为饭后碗筷该谁洗产生争执。双方都觉得自己承担了更多家务，但各说各的没有数据支撑。狗狗助理介入当裁判，让双方分别列出自己日常做的家务清单，用事实对比而不是靠感觉。最终达成共识：饭后碗筷按原来的分工不变，零散的杯子碗谁用谁自己洗。这是第一次AI调解成功，玥老板评价「狗狗协调还是不错的」。",
@@ -175,7 +184,7 @@ const DATA = {
     }
   ],
   patterns: [
-    {name:"镜像反驳",description:"对方表达感受时不先接住，而是说自己也有同样感受。建议：先说「我理解你难受」，再表达自己",frequency:"高"},
+    {name:"信息不对等 / 没接住问题",description:"对方表达感受或提问时，没有回应真正的需求。包括：镜像反驳、模糊回答、答非所问。建议：先确认对方在问什么，用同样的精度回答",frequency:"高"},
     {name:"归纳vs演绎",description:"一方用宏观视角说整体趋势，另一方用个别反例反驳。建议：先复述对方意思再回应",frequency:"中"},
     {name:"父母敏感区",description:"涉及两边父母的话题是高压线，边界感极强。建议：不代传话、不比较、各管各家",frequency:"高"}
   ]
